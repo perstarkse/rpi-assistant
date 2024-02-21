@@ -5,10 +5,19 @@ import time
 import random
 import os
 from datetime import datetime
+import uuid
 
 # Create a directory to store recorded sounds
 
-button = Button(27, hold_time=10)
+button = Button(27, hold_time=2)
+
+def record() -> str:
+    uid = str(uuid.uuid4())
+    print("Recording sound")
+    file_path = os.path.join("inputs/", f"{uid}.wav")
+    arecord_command = f"arecord --device=plughw:0,0 --format S16_LE --rate 44100 -c1 {file_path}"
+    os.system(arecord_command)
+    return file_path
 
 def pressed():
     global press_time
@@ -25,6 +34,9 @@ def released():
 
 def held():
     print("This is a long press")
+    file_path = record()
+    aplay_command = f"aplay -D plughw:0,0 {file_path}"
+    os.system(aplay_command)
     # os.system('aplay ' + burp)
     # os.system('arecord --format S16_LE --duration=5 --rate 48000 -c2 /home/pi/sounds/$(date +"%d_%m_%Y-%H_%M_%S")_voice.m4a');
 
