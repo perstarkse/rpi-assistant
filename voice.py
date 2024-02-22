@@ -1,47 +1,51 @@
 #!/usr/bin/env python3
-from gpiozero import Button
+from gpiozero import Button, LED
 from signal import pause
 import time
-import random
 import os
+import subprocess
 from datetime import datetime
 import uuid
-
-# Create a directory to store recorded sounds
+import signal
 
 button = Button(27, hold_time=2)
+green_led = LED(23)
+recording_process = None
+file_path = None
 
-def record() -> str:
+def record():
     uid = str(uuid.uuid4())
     print("Recording sound")
+    global file_path
     file_path = os.path.join("inputs/", f"{uid}.wav")
-    arecord_command = f"arecord --device=plughw:0,0 --format S16_LE --rate 44100 -c1 {file_path}"
-    os.system(arecord_command)
-    return file_path
+    arecord_command = ["arecord", "--device=plughw:0,0", "--format", "S16_LE", "--rate", "44100", "-c1", "--nonblock", file_path]
 
-def pressed():
-    global press_time
-    press_time = time.time()
-    print("Pressed at %s" % (press_time));
+    global recording_process
+    recording_process = subprocess.Popen(arecord_command, preexec_fn=os.setsid)
+    time.sleep(1)
+    green_led.on()
 
 def released():
-    release_time = time.time()
-    pressed_for = release_time - press_time
-    print("Released at %s after %.2f seconds" % (release_time, pressed_for))
-    if pressed_for < button.hold_time:
-        print("This is a short press")
-        os.system('aplay ' + "-D plughw:0,0 " + "test.wav")
+    global recording_process
+    global file_path
 
-def held():
-    print("This is a long press")
-    file_path = record()
-    aplay_command = f"aplay -D plughw:0,0 {file_path}"
-    os.system(aplay_command)
-    # os.system('aplay ' + burp)
-    # os.system('arecord --format S16_LE --duration=5 --rate 48000 -c2 /home/pi/sounds/$(date +"%d_%m_%Y-%H_%M_%S")_voice.m4a');
+    print("Released at %s" % (time.time()))
+    green_led.off()
+    if recording_process is not None:
+        print("Stopping recording process")
+        
+        # Send a signal to the entire process group
+        os.killpg(os.getpgid(recording_process.pid), signal.SIGINT)
 
-button.when_pressed = pressed
+        time.sleep(1)
+        
+        # Play the recorded audio
+        print("Playing the recorded audio")
+        os.system(f"aplay -D plughw:0,0 -c1 {file_path}")
+
+print("Press the button to record")
+button.when_pressed = record
 button.when_released = released
-button.when_held = held
 
 pause()
+
