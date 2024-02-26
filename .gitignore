@@ -2,3 +2,6 @@
 myenv/
 inputs/
 outputs/
+.lgd-nfy0
+__pycache__/
+```

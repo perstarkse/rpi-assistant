@@ -6,15 +6,18 @@ load_dotenv()
 
 api_key = os.getenv("DEEPGRAM_API_KEY")
 
-def transcribe_audio(wav_file_path):
+def transcribe_audio(buffer):
     url = "https://api.deepgram.com/v1/listen"
     headers = {
         "Authorization": f"Token {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "audio/wav"
     }
-    data = {
-        "url": wav_file_path
-    }
+
+    # Read the audio file as binary data
+    # with open(wav_file_path, "rb") as file:
+    #     audio_data = file.read()
+    audio_data = buffer
+
     params = {
         "smart_format": "true",
         "punctuate": "true",
@@ -22,6 +25,6 @@ def transcribe_audio(wav_file_path):
         "model": "nova-2"
     }
 
-    response = requests.post(url, headers=headers, json=data, params=params)
+    response = requests.post(url, headers=headers, data=audio_data, params=params)
 
     return response.json()
